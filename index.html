@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Game Hub</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #101827;
+  color: white;
+  text-align: center;
+}
+
+header {
+  padding: 40px 20px;
+}
+
+h1 {
+  font-size: 40px;
+}
+
+.games {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  max-width: 900px;
+  margin: auto;
+}
+
+.card {
+  background: #25344d;
+  padding: 25px;
+  border-radius: 20px;
+}
+
+button {
+  background: #69a7ff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+footer {
+  padding: 30px;
+  color: #aaa;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>MY GAME HUB</h1>
+  <p>나만의 게임 모음 사이트</p>
+</header>
+
+<div class="games">
+
+  <div class="card">
+    <h2>슬라임 클리커</h2>
+    <p>나의 첫 번째 게임</p>
+    <button onclick="location.href='게임파일이름.html'">
+      게임 플레이
+    </button>
+  </div>
+
+</div>
+
+<footer>
+  MY GAME HUB
+</footer>
+
+</body>
+</html>
