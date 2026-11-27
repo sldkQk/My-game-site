@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>슬라임 클릭커 시뮬레이터 - SLIME CLICKER</title>
+    <!-- SEO 및 소셜 공유(OG) 메타 태그 -->
+    <meta name="description" content="말랑말랑 슬라임을 터치해 젤리를 모으고, 5,000마리의 펫을 수집하고 진화시키는 무료 웹 클리커 게임!">
+    <meta property="og:title" content="슬라임 클릭커 시뮬레이터">
+    <meta property="og:description" content="슬라임을 클릭하고 귀여운 파트너 펫을 부화시켜 환생에 도전하세요!">
+    <meta property="og:type" content="website">
+    <!-- 파비콘 (이모지 SVG 활용으로 별도 이미지 파일 불필요) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍬</text></svg>">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome (아이콘) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: radial-gradient(circle, #1e1b4b 0%, #0f172a 100%);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .pixel-font {
+            font-family: 'DungGeunMo', monospace;
+        }
+        
+        /* 로블록스 풍 젤리 버튼 효과 */
+        .roblox-btn {
+            transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 5px 0 #0f172a;
+        }
+        .roblox-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #0f172a;
+        }
+        .roblox-btn-green {
+            box-shadow: 0 5px 0 #15803d;
+        }
+        .roblox-btn-green:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #15803d;
+        }
+        .roblox-btn-orange {
+            box-shadow: 0 5px 0 #c2410c;
+        }
+        .roblox-btn-orange:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #c2410c;
+        }
+        .roblox-btn-red {
+            box-shadow: 0 5px 0 #991b1b;
+        }
+        .roblox-btn-red:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #991b1b;
+        }
+
+        /* 말랑말랑 슬라임 기본 애니메이션 */
+        @keyframes slime-bounce {
+            0%, 100% { transform: scale(1, 1) translateY(0); }
+            50% { transform: scale(1.12, 0.82) translateY(12px); }
+        }
+        @keyframes slime-clicked-effect {
+            0% { transform: scale(0.85); }
+            50% { transform: scale(1.1) translateY(-10px); }
+            100% { transform: scale(1); }
+        }
+        .slime-animation {
+            animation: slime-bounce 2s infinite ease-in-out;
+            transform-origin: bottom center;
+        }
+        .slime-clicked {
+            animation: slime-clicked-effect 0.15s ease-out;
+            transform-origin: bottom center;
+        }
+        
+        /* 알 흔들리기 효과 (부화용) */
+        @keyframes egg-shake {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            10%, 30%, 50%, 70%, 90% { transform: rotate(-8deg) scale(1.05); }
+            20%, 40%, 60%, 80% { transform: rotate(8deg) scale(1.05); }
+        }
+        .egg-shaking {
+            animation: egg-shake 1.2s ease-in-out;
+        }
+
+        /* 떠다니는 숫자 효과 */
+        .floating-text {
+            position: absolute;
+            pointer-events: none;
+            animation: floatUp 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+            font-family: 'DungGeunMo', monospace;
+            font-weight: 900;
+            z-index: 50;
+        }
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(0.8);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-110px) scale(1.4);
+            }
+        }
+
+        /* 커스텀 스크롤바 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden pb-24">
+
+    <!-- 상단 헤더 -->
+    <header class="bg-slate-900/95 border-b-4 border-slate-950 p-4 sticky top-0 z-40 shadow-lg backdrop-blur-md">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center text-slate-100 font-black pixel-font shadow-inner text-xl">🍬</div>
+                <div>
+                    <h1 class="font-extrabold text-md pixel-font tracking-wider text-amber-300 leading-none">SLIME CLICKER</h1>
+                    <span class="text-[10px] text-slate-400 font-bold">REBIRTH & PETS v2.5</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="openStatsModal()" class="w-9 h-9 bg-slate-800 border-2 border-slate-700 rounded-xl text-slate-300 hover:text-white flex items-center justify-center transition" title="통계">
+                    <i class="fa-solid fa-chart-simple text-md"></i>
+                </button>
+                <button onclick="openHelpModal()" class="w-9 h-9 bg-slate-800 border-2 border-slate-700 rounded-xl text-slate-300 hover:text-white flex items-center justify-center transition" title="도움말">
+                    <i class="fa-solid fa-circle-question text-md"></i>
+                </button>
+                <button onclick="resetGameWithConfirm()" class="bg-rose-600 hover:bg-rose-500 border-b-4 border-rose-800 active:border-b-0 text-white px-3 py-1.5 rounded-xl text-xs font-bold pixel-font transition" title="초기화">
+                    리셋
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 게임 영역 -->
+    <main class="flex-grow flex flex-col max-w-md w-full mx-auto p-4 space-y-4">
+        
+        <!-- 실시간 스탯 패널 -->
+        <div class="grid grid-cols-2 gap-3">
+            <div class="bg-slate-900/95 border-4 border-slate-950 rounded-2xl p-3 flex items-center space-x-3 shadow-md">
+                <div class="w-10 h-10 rounded-lg bg-teal-500/20 flex items-center justify-center border-2 border-teal-500/40 text-xl">🍬</div>
+                <div>
+                    <span class="text-[9px] text-slate-400 font-black block leading-none mb-1">탭당 획득 젤리</span>
+                    <span id="dpc-display" class="font-black text-teal-400 pixel-font text-sm">1</span>
+                </div>
+            </div>
+            <div class="bg-slate-900/95 border-4 border-slate-950 rounded-2xl p-3 flex items-center space-x-3 shadow-md">
+                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center border-2 border-purple-500/40 text-xl">🔄</div>
+                <div>
+                    <span class="text-[9px] text-slate-400 font-black block leading-none mb-1">환생 보너스</span>
+                    <span id="rebirth-bonus-display" class="font-black text-purple-400 pixel-font text-sm">x1.0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 슬라임 터치 구역 -->
+        <div id="click-zone" class="relative flex-grow flex flex-col items-center justify-center bg-slate-950/40 border-4 border-slate-950/60 rounded-3xl p-6 min-h-[300px] shadow-inner cursor-pointer">
+            
+            <!-- 펫 보너스 알람 및 동적 장착 카운트 비율 적용 -->
+            <div class="absolute top-4 left-4 bg-slate-900/85 border-2 border-slate-950 px-2.5 py-1 rounded-full text-[10px] font-bold text-slate-300">
+                🐾 장착 펫 보너스: <span id="pet-bonus-display" class="text-amber-400 font-black">x1.0</span> <span id="equipped-ratio-display" class="text-slate-400 font-medium ml-1">(0/3)</span>
+            </div>
+
+            <!-- 중앙 대형 슬라임 캐릭터 -->
+            <div class="relative w-48 h-48 flex items-center justify-center">
+                <!-- 슬라임 바닥 그림자 -->
+                <div class="absolute bottom-3 w-36 h-4 bg-black/40 rounded-full blur-md"></div>
+                
+                <!-- 슬라임 본체 -->
+                <div id="slime-character" class="slime-animation select-none pointer-events-none transition-transform duration-300">
+                    <svg id="slime-svg" class="w-40 h-40 drop-shadow-[0_10px_15px_rgba(34,197,94,0.3)]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path id="slime-body" d="M15,70 C15,40 30,25 50,25 C70,25 85,40 85,70 C85,85 75,90 50,90 C25,90 15,85 15,70 Z" fill="#22c55e" />
+                        <!-- 볼터치 -->
+                        <ellipse cx="28" cy="68" rx="5" ry="3" fill="#f43f5e" opacity="0.6"/>
+                        <ellipse cx="72" cy="68" rx="5" ry="3" fill="#f43f5e" opacity="0.6"/>
+                        <!-- 눈 -->
+                        <g id="slime-eyes">
+                            <circle cx="38" cy="58" r="4" fill="#0f172a"/>
+                            <circle cx="62" cy="58" r="4" fill="#0f172a"/>
+                            <circle cx="37" cy="56" r="1.5" fill="white"/>
+                            <circle cx="61" cy="56" r="1.5" fill="white"/>
+                        </g>
+                        <!-- 입 -->
+                        <path id="slime-mouth" d="M46,68 Q50,72 54,68" stroke="#0f172a" stroke-width="3" stroke-linecap="round" fill="none"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- 슬라임 등급 및 정보 -->
+            <div class="text-center mt-4">
+                <span id="slime-rank-badge" class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-semibold uppercase tracking-wider pixel-font">초록 슬라임</span>
+                <p class="text-[10px] text-slate-500 mt-2 font-semibold"><i class="fa-solid fa-keyboard mr-1"></i> 마우스 클릭 / 터치 / 키보드 연타 지원!</p>
+            </div>
+        </div>
+
+        <!-- 하단 메뉴 전환 탭 -->
+        <div class="grid grid-cols-3 gap-2">
+            <button onclick="switchTab('pets')" id="tab-btn-pets" class="roblox-btn py-3 rounded-2xl font-black pixel-font transition text-xs border-2 border-slate-950 bg-amber-500 text-slate-950 roblox-btn-orange">
+                🐾 나의 펫
+            </button>
+            <button onclick="switchTab('eggs')" id="tab-btn-eggs" class="roblox-btn py-3 rounded-2xl font-black pixel-font transition text-xs border-2 border-slate-950 bg-slate-800 text-slate-300">
+                🥚 알 소환
+            </button>
+            <button onclick="switchTab('rebirth')" id="tab-btn-rebirth" class="roblox-btn py-3 rounded-2xl font-black pixel-font transition text-xs border-2 border-slate-950 bg-slate-800 text-slate-300">
+                🔄 환생 상점
+            </button>
+        </div>
+
+        <!-- 하단 탭 콘텐츠 컨테이너 -->
+        <div class="bg-slate-900/95 border-4 border-slate-950 rounded-2xl p-4 flex-grow h-[290px] overflow-y-auto shadow-inner relative">
+            
+            <!-- 탭 1: 나의 펫 보관함 -->
+            <div id="tab-pets" class="space-y-3">
+                <div class="flex flex-wrap justify-between items-center border-b border-slate-800 pb-2 gap-2">
+                    <div class="text-left">
+                        <h3 class="text-xs font-bold text-amber-400 uppercase tracking-widest pixel-font">펫 보관소 (<span id="pet-count">0</span>/<span id="pet-max">15</span>)</h3>
+                        <p class="text-[8px] text-slate-500 font-semibold">보관함 확장 단계: <span id="bag-upgrade-count-display">0</span>/997</p>
+                    </div>
+                    <div class="flex space-x-1 flex-wrap gap-y-1">
+                        <!-- 자동 진화 합성 기능 버튼 -->
+                        <button onclick="autoMergePets()" class="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-2 py-0.5 rounded text-[10px] font-black border border-slate-950 shadow-md">
+                            ✨ 자동 진화
+                        </button>
+                        <!-- 인벤토리 업그레이드 버튼 -->
+                        <button onclick="upgradeInventory()" id="bag-upgrade-btn" class="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-slate-100 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-950">
+                            ➕ 확장 (<span id="bag-cost-display">500</span>🍬)
+                        </button>
+                        <button id="multi-release-toggle-btn" onclick="toggleReleaseMode()" class="bg-rose-700 hover:bg-rose-600 text-slate-100 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-950">
+                            🗑️ 선택 방생
+                        </button>
+                        <button id="unequip-all-btn" onclick="unequipAllPets()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold">모두 해제</button>
+                    </div>
+                </div>
+
+                <!-- 펫 다중 장착 및 자동 장착 신규 추가 보드 영역 -->
+                <div class="flex justify-between items-center bg-slate-950/40 p-2 rounded-xl border border-slate-800/60 gap-2">
+                    <button onclick="equipBestPets()" class="flex-1 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black py-1.5 px-3 rounded-lg text-[10.5px] border border-slate-950 shadow transition-all hover:scale-[1.02] active:scale-95">
+                        ⚡ 최강 펫 자동 장착
+                    </button>
+                    <button onclick="upgradeEquipSlots()" id="equip-slot-upgrade-btn" class="flex-1 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-black py-1.5 px-3 rounded-lg text-[10.5px] border border-slate-950 shadow disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 transition-all hover:scale-[1.02] active:scale-95">
+                        🐾 슬롯 확장 (<span id="equip-slot-cost-display">5,000</span>🍬)
+                    </button>
+                </div>
+                
+                <!-- 다중 방생 컨트롤러 (활성화 시에만 노출) -->
+                <div id="bulk-release-bar" class="hidden bg-rose-950/40 border-2 border-rose-900/50 rounded-xl p-2 flex justify-between items-center">
+                    <span class="text-[10px] text-rose-300 font-bold"><i class="fa-solid fa-square-check mr-1"></i> <span id="selected-release-count" class="pixel-font">0</span>마리 선택됨</span>
+                    <div class="flex space-x-1.5">
+                        <button onclick="cancelReleaseMode()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded text-[10px] font-bold">취소</button>
+                        <button onclick="confirmBulkRelease()" class="bg-rose-600 hover:bg-rose-500 text-white px-2 py-1 rounded text-[10px] font-bold">방생 실행</button>
+                    </div>
+                </div>
+                
+                <p id="pet-info-tip" class="text-[10px] text-slate-400 font-semibold leading-relaxed">
+                    <i class="fa-solid fa-circle-info text-amber-400"></i> <strong>동일한 펫 3마리</strong>는 [자동 진화]를 통해 다음 등급(3배 강화)으로 합칠 수 있습니다!<br>
+                    <strong>[원터치 간편 조작]</strong>으로 클릭하면 즉시 장착되며, 최대 장착 개수까지 동반이 가능합니다.
+                </p>
+                
+                <!-- 펫 동적 렌더링 영역 -->
+                <div id="pets-grid" class="grid grid-cols-4 gap-2 pt-2">
+                    <!-- 예시 펫 카드가 들어갈 자리 -->
+                </div>
+            </div>
+
+            <!-- 탭 2: 펫 알 부화 (Eggs) -->
+            <div id="tab-eggs" class="hidden space-y-3.5">
+                
+                <!-- 알 소환 설정 바 (다중뽑기 및 스킵) -->
+                <div class="bg-slate-950/70 border-2 border-slate-800 rounded-xl p-2.5 flex flex-col space-y-2.5 sm:space-y-0 sm:flex-row sm:justify-between sm:items-center text-xs">
+                    <!-- 다중 소환 설정 및 잠금해제 -->
+                    <div class="flex flex-col space-y-1">
+                        <div class="flex items-center space-x-1">
+                            <span class="font-bold text-slate-300">소환 수량:</span>
+                            <div class="inline-flex rounded-lg border border-slate-800 p-0.5 bg-slate-900">
+                                <button onclick="setHatchCount(1)" id="hatch-cnt-1" class="px-2 py-0.5 text-[9px] font-black rounded-md bg-purple-600 text-white">1개</button>
+                                <button onclick="setHatchCount(3)" id="hatch-cnt-3" class="px-2 py-0.5 text-[9px] font-black rounded-md text-slate-400 hover:text-white">3개</button>
+                                <button onclick="setHatchCount(5)" id="hatch-cnt-5" class="px-2 py-0.5 text-[9px] font-black rounded-md text-slate-400 hover:text-white">5개</button>
+                                <button onclick="setHatchCount(15)" id="hatch-cnt-15" class="px-2 py-0.5 text-[9px] font-black rounded-md text-slate-400 hover:text-white">15개</button>
+                            </div>
+                        </div>
+                        <div class="flex flex-col space-y-0.5">
+                            <button onclick="unlockMultiHatch(3)" id="unlock-3-btn" class="hidden text-[8px] bg-indigo-900 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 rounded px-1.5 py-0.5">3회 뽑기 해금 (1,000🍬)</button>
+                            <button onclick="unlockMultiHatch(5)" id="unlock-5-btn" class="hidden text-[8px] bg-indigo-900 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 rounded px-1.5 py-0.5">5회 뽑기 해금 (5,000🍬)</button>
+                            <button onclick="unlockMultiHatch(15)" id="unlock-15-btn" class="hidden text-[8px] bg-indigo-900 hover:bg-indigo-800 text-indigo-200 border border-indigo-700 rounded px-1.5 py-0.5">15회 뽑기 해금 (25,000🍬)</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 빠른 소환 (스킵) 15단계 업그레이드 -->
+                    <div class="flex flex-col space-y-1 text-right items-end">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-slate-300">부화 속도:</span>
+                            <span id="speed-level-display" class="font-bold text-amber-400 text-[10px] pixel-font">Lv.1 (1.2초)</span>
+                        </div>
+                        <button onclick="upgradeHatchSpeed()" id="speed-upgrade-btn" class="bg-purple-700 hover:bg-purple-600 text-white font-bold px-2 py-0.5 rounded text-[9px] border border-slate-950">
+                            ⚡ 속도 강화 (<span id="speed-cost-display">300</span>🍬)
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bg-slate-950/50 border border-slate-800/80 px-3 py-1.5 rounded-lg text-center">
+                    <p class="text-[9px] text-slate-400 font-bold"><i class="fa-solid fa-keyboard text-purple-400"></i> 소환 화면이나 결과창에서 <strong>키보드 'R' 키</strong>를 누르면 바로 재소환합니다!</p>
+                </div>
+                
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-widest pixel-font">미지의 슬라임 파트너 소환</h3>
+                
+                <div class="grid grid-cols-1 gap-3">
+                    <!-- 초원 알 -->
+                    <div class="bg-slate-950/80 border-2 border-slate-800 rounded-xl p-3 flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-4xl">🥚</span>
+                            <div>
+                                <h4 class="font-extrabold text-sm text-green-400">숲의 에코 알</h4>
+                                <p class="text-[10px] text-slate-400">말랑토끼(50%) / 가든캣(35%) / 무당벌레(12%) / 미니페가수스(3%)</p>
+                            </div>
+                        </div>
+                        <button onclick="buyEgg('meadow')" id="egg-meadow-btn" class="roblox-btn roblox-btn-green bg-green-500 hover:bg-green-600 text-slate-950 border-2 border-slate-950 px-4 py-2 rounded-xl text-xs font-extrabold pixel-font">
+                            100 🍬
+                        </button>
+                    </div>
+
+                    <!-- 사막 알 -->
+                    <div class="bg-slate-950/80 border-2 border-slate-800 rounded-xl p-3 flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-4xl">🏜️</span>
+                            <div>
+                                <h4 class="font-extrabold text-sm text-yellow-500">황금 사막 알</h4>
+                                <p class="text-[10px] text-slate-400">사막여우(50%) / 모래전갈(35%) / 미라독(13%) / 미스터리스핑크스(2%)</p>
+                            </div>
+                        </div>
+                        <button onclick="buyEgg('desert')" id="egg-desert-btn" class="roblox-btn roblox-btn-orange bg-amber-500 hover:bg-amber-600 text-slate-950 border-2 border-slate-950 px-4 py-2 rounded-xl text-xs font-extrabold pixel-font">
+                            3,000 🍬
+                        </button>
+                    </div>
+
+                    <!-- 지옥 알 -->
+                    <div class="bg-slate-950/80 border-2 border-slate-800 rounded-xl p-3 flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-4xl">🌋</span>
+                            <div>
+                                <h4 class="font-extrabold text-sm text-rose-500">불꽃 정령 알</h4>
+                                <p class="text-[10px] text-slate-400">꼬마임프(50%) / 아기 드래곤(35%) / 화산거북(13%) / 불사조(2%)</p>
+                            </div>
+                        </div>
+                        <button onclick="buyEgg('hell')" id="egg-hell-btn" class="roblox-btn bg-rose-500 hover:bg-rose-600 text-slate-950 border-2 border-slate-950 px-4 py-2 rounded-xl text-xs font-extrabold pixel-font">
+                            50,000 🍬
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 탭 3: 환생 (Rebirth) -->
+            <div id="tab-rebirth" class="hidden space-y-4">
+                <div class="bg-gradient-to-r from-indigo-950/50 to-purple-950/50 border-2 border-purple-500/20 rounded-xl p-4 text-center">
+                    <span class="text-3xl mb-1 block">🔄</span>
+                    <h4 class="font-extrabold text-md text-purple-300">경이로운 진화와 환생</h4>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                        환생하면 보유한 🍬젤리가 전부 초기화되지만,<br>
+                        <strong>환생 배율이 증가</strong>하여 슬라임이 한 단계 영구 진화하며 더욱 빠르게 성장합니다!
+                    </p>
+                </div>
+
+                <div class="bg-slate-950/80 border-2 border-slate-800 rounded-xl p-3 flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-sm">한계 초월 환생</h4>
+                        <p class="text-[11px] text-purple-400 font-bold">환생 배율 증가: <span id="next-rebirth-mult">+1.0x</span></p>
+                        <p class="text-[10px] text-slate-500">현재 환생 차수: <span id="current-rebirth-count" class="font-bold">0</span>차</p>
+                    </div>
+                    <button onclick="triggerRebirth()" id="rebirth-btn" class="roblox-btn bg-purple-600 hover:bg-purple-700 text-white border-2 border-slate-950 px-4 py-2.5 rounded-xl text-xs font-extrabold pixel-font">
+                        1,000 🍬
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- 왼쪽 아래 고정 보유 재화 HUD -->
+    <div class="fixed bottom-6 left-4 md:left-[calc(50%-13rem)] z-40 space-y-1.5 pointer-events-none">
+        <!-- 🍬 보유 젤리 HUD -->
+        <div class="bg-slate-950/90 backdrop-blur-md border-2 border-teal-500/50 pl-3 pr-4 py-1.5 rounded-xl shadow-xl flex items-center space-x-2 w-max animate-pulse">
+            <span class="text-xl">🍬</span>
+            <div class="text-left">
+                <span class="text-[8px] text-slate-400 block leading-none mb-0.5 pixel-font uppercase tracking-wider">보유 말랑 젤리</span>
+                <div class="flex items-baseline space-x-0.5">
+                    <span id="gold-display" class="text-md font-extrabold text-teal-300 pixel-font tracking-wide">0</span>
+                    <span class="text-slate-400 text-[9px] pixel-font">🍬</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🔄 보유 환생 HUD -->
+        <div class="bg-slate-950/90 backdrop-blur-md border-2 border-purple-500/50 pl-3 pr-4 py-1.5 rounded-xl shadow-xl flex items-center space-x-2 w-max">
+            <span class="text-xl">🔄</span>
+            <div class="text-left">
+                <span class="text-[8px] text-slate-400 block leading-none mb-0.5 pixel-font uppercase tracking-wider">누적 환생 횟수</span>
+                <div class="flex items-baseline space-x-0.5">
+                    <span id="rebirth-display" class="text-md font-extrabold text-purple-300 pixel-font tracking-wide">0</span>
+                    <span class="text-slate-400 text-[9px] pixel-font">회</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 푸터 -->
+    <footer class="text-center p-3 text-[11px] text-purple-300/60 border-t border-slate-900 bg-slate-950/40 max-w-md w-full mx-auto">
+        <span>© 2026 슬라임 클리커 월드. 터치하여 펫과 동반 진화하세요!</span>
+    </footer>
+
+    <!-- 알 뽑기 연출 모달 -->
+    <div id="hatch-modal" class="hidden fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.15)_0%,rgba(0,0,0,0)_70%)] animate-pulse"></div>
+        
+        <div class="text-center relative z-10 max-w-sm w-full">
+            <h2 id="hatch-announce" class="text-md font-black text-amber-400 pixel-font tracking-wider mb-6">파트너를 소환하는 중...</h2>
+            
+            <!-- 단일 소환 연출용 뷰어 -->
+            <div id="single-hatch-view" class="relative w-48 h-48 mx-auto flex items-center justify-center">
+                <div id="hatch-glow" class="hidden absolute w-60 h-60 bg-gradient-to-r from-purple-500 to-amber-400 rounded-full blur-2xl opacity-40 animate-spin"></div>
+                <span id="hatch-egg-visual" class="text-[100px] transform transition duration-300 filter drop-shadow-2xl">🥚</span>
+                <span id="hatch-pet-visual" class="hidden text-[110px] filter drop-shadow-2xl animate-bounce">🐱</span>
+            </div>
+
+            <!-- 다중 소환 결과용 격자뷰어 (3회/5회/15회 소환 시 결과 리스트업) -->
+            <div id="multi-hatch-view" class="hidden grid grid-cols-3 gap-2.5 bg-slate-900/60 border border-slate-800 p-4 rounded-2xl max-h-[260px] overflow-y-auto mb-4">
+                <!-- 동적으로 생성됨 -->
+            </div>
+
+            <!-- 부화 성공 데이터 영역 (단일 전용) -->
+            <div id="hatch-result" class="opacity-0 transition-opacity duration-500 mt-6 space-y-2">
+                <span id="hatch-rarity" class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20">COMMON</span>
+                <h3 id="hatch-pet-name" class="text-2xl font-black mt-1 text-white">동물펫</h3>
+                <p id="hatch-pet-multiplier" class="text-xs text-amber-300 font-bold pixel-font">클릭 증폭 배율: +x1.5</p>
+            </div>
+
+            <div class="space-y-3 mt-6">
+                <!-- R키 안내 라벨 -->
+                <p class="text-[10px] text-slate-400 font-bold animate-pulse"><i class="fa-solid fa-rotate-left text-amber-400"></i> 키보드 <strong>'R' 키</strong>를 누르면 결과창을 닫고 곧바로 재소환합니다!</p>
+                <button onclick="closeHatchModal()" id="hatch-close-btn" class="hidden w-full roblox-btn roblox-btn-orange bg-amber-400 text-slate-950 font-black py-3 rounded-2xl text-sm pixel-font border-2 border-slate-950">
+                    확인 및 닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 다중 방생 재확인 경고창 모달 -->
+    <div id="bulk-release-confirm-modal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-4 border-rose-600 rounded-2xl max-w-xs w-full p-6 shadow-2xl text-center">
+            <i class="fa-solid fa-triangle-exclamation text-rose-500 text-4xl mb-3 animate-bounce"></i>
+            <h3 class="text-md font-bold text-rose-400 pixel-font mb-2">정말 선택한 펫을 방생할까요?</h3>
+            <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+                선택하신 <span id="bulk-count-warn" class="font-bold text-rose-400">0</span>마리의 펫이 즉시 자연으로 영원히 돌아갑니다. 장착되어 있던 펫은 자동 장착 해제됩니다.
+            </p>
+            <div class="grid grid-cols-2 gap-3 mt-4">
+                <button onclick="closeBulkReleaseConfirmModal()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded-lg text-xs pixel-font border-2 border-slate-950 transition">
+                    아니오, 취소
+                </button>
+                <button onclick="executeBulkRelease()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded-lg text-xs pixel-font border-2 border-slate-950 transition">
+                    예, 방생합니다
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 통계 모달 -->
+    <div id="stats-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-4 border-slate-950 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative">
+            <button onclick="closeStatsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h3 class="text-lg font-bold text-amber-400 pixel-font mb-4 flex items-center space-x-2">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>나의 성장 일지</span>
+            </h3>
+            <div class="space-y-3 text-sm text-slate-300">
+                <div class="flex justify-between border-b border-slate-800 pb-2">
+                    <span class="text-slate-400">누적 클릭 횟수</span>
+                    <span id="stat-clicks" class="font-bold pixel-font">0회</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-800 pb-2">
+                    <span class="text-slate-400">누적 획득 젤리 수량</span>
+                    <span id="stat-total-gold" class="font-bold pixel-font">0 🍬</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-800 pb-2">
+                    <span class="text-slate-400">보유 펫 마리 수</span>
+                    <span id="stat-helpers-count" class="font-bold pixel-font">0마리</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-800 pb-2">
+                    <span class="text-slate-400">최대 보관함 슬롯</span>
+                    <span id="stat-bag-max" class="font-bold pixel-font">15개</span>
+                </div>
+                <div class="flex justify-between pb-1">
+                    <span class="text-slate-400">누적 환생 횟수</span>
+                    <span id="stat-fever-count" class="font-bold pixel-font">0회</span>
+                </div>
+            </div>
+            <button onclick="closeStatsModal()" class="w-full mt-6 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-sm pixel-font border-2 border-slate-950 transition">
+                돌아가기
+            </button>
+        </div>
+    </div>
+
+    <!-- 도움말 모달 -->
+    <div id="help-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-4 border-slate-950 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative">
+            <button onclick="closeHelpModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h3 class="text-lg font-bold text-amber-400 pixel-font mb-4 flex items-center space-x-2">
+                <i class="fa-solid fa-circle-question"></i>
+                <span>말랑이 슬라임 가이드</span>
+            </h3>
+            <div class="space-y-3.5 text-xs text-slate-300 leading-relaxed">
+                <div class="flex items-start space-x-2.5">
+                    <span class="bg-amber-400 text-slate-950 w-5 h-5 rounded-md flex items-center justify-center font-bold shrink-0">1</span>
+                    <p>중앙의 귀여운 <strong>슬라임</strong>을 마우스 클릭, 터치, 혹은 <strong>키보드 연타</strong>로 마구 주물러서 🍬젤리를 얻어보세요.</p>
+                </div>
+                <div class="flex items-start space-x-2.5">
+                    <span class="bg-amber-400 text-slate-950 w-5 h-5 rounded-md flex items-center justify-center font-bold shrink-0">2</span>
+                    <p>젤리가 쌓이면 <strong>알 소환 탭</strong>으로 가서 소중한 파트너 펫을 획득하세요.</p>
+                </div>
+                <div class="flex items-start space-x-2.5">
+                    <span class="bg-amber-400 text-slate-950 w-5 h-5 rounded-md flex items-center justify-center font-bold shrink-0">3</span>
+                    <p>인벤토리에서 <strong>펫 카드를 터치하는 즉시 장착/해제</strong>됩니다. 가방이 모자라면 🍬젤리로 <strong>가방 확장</strong>을 하거나 쓸모없는 펫을 <strong>선택 방생</strong>해 보세요.</p>
+                </div>
+                <div class="flex items-start space-x-2.5">
+                    <span class="bg-amber-400 text-slate-950 w-5 h-5 rounded-md flex items-center justify-center font-bold shrink-0">4</span>
+                    <p>어마어마한 젤리가 모이면 <strong>환생(Rebirth)</strong>을 통해 슬라임을 다음 성질의 모습으로 전설 진화시키세요!</p>
+                </div>
+            </div>
+            <button onclick="closeHelpModal()" class="w-full mt-6 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-sm pixel-font border-2 border-slate-950 transition">
+                슬라임 키우러 가기!
+            </button>
+        </div>
+    </div>
+
+    <!-- 리셋 확인 모달 -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-4 border-rose-600 rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center">
+            <i class="fa-solid fa-triangle-exclamation text-rose-500 text-4xl mb-3 animate-pulse"></i>
+            <h3 class="text-md font-bold text-rose-400 pixel-font mb-2">모든 슬라임 데이터를 지울까요?</h3>
+            <p class="text-xs text-slate-400 mb-6 leading-relaxed">성장시킨 모든 기록, 동반한 펫, 가방 확장 내역이 완전히 영구적으로 리셋됩니다.</p>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeConfirmModal()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded-lg text-xs pixel-font border-2 border-slate-950 transition">
+                    아니오
+                </button>
+                <button onclick="resetGame()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-lg text-xs pixel-font border-2 border-slate-950 transition">
+                    예, 다 리셋해요
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 알림 배너 -->
+    <div id="toast" class="opacity-0 pointer-events-none fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 border-2 border-slate-950 px-4 py-2.5 rounded-xl text-xs pixel-font shadow-2xl transition-all duration-300 z-50 flex items-center space-x-2">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toast-msg">진화에 성공했습니다!</span>
+    </div>
+
+    <!-- 효과음 오실레이터 합성 엔진 -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playTone(freq, type, duration, volume = 0.08) {
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        // 클릭 효과음
+        function playClickSound() {
+            playTone(520, 'sine', 0.1, 0.12);
+        }
+        
+        // 알 흔들림 효과음
+        function playEggShakeSound() {
+            playTone(220, 'triangle', 0.1, 0.15);
+        }
+
+        // 알 부화 성공 효과음
+        function playHatchSuccessSound(rarity) {
+            let mult = rarity === 'legendary' ? 1.6 : (rarity === 'rare' || rarity === 'epic' ? 1.3 : 1.0);
+            playTone(300 * mult, 'sine', 0.12, 0.08);
+            setTimeout(() => playTone(380 * mult, 'sine', 0.12, 0.08), 80);
+            setTimeout(() => playTone(450 * mult, 'sine', 0.15, 0.08), 160);
+            if (rarity === 'epic' || rarity === 'legendary') {
+                setTimeout(() => playTone(600 * mult, 'sine', 0.25, 0.12), 240);
+            }
+        }
+
+        // 강화 및 해금 성공 효과음
+        function playUpgradeSound() {
+            playTone(587, 'triangle', 0.1, 0.08);
+            setTimeout(() => playTone(880, 'triangle', 0.15, 0.08), 80);
+        }
+
+        // 방생 효과음
+        function playReleaseSound() {
+            playTone(400, 'sine', 0.1, 0.08);
+            setTimeout(() => playTone(250, 'sine', 0.15, 0.08), 80);
+        }
+    </script>
+
+    <!-- 게임 구동 및 데이터 모델 연동 스크립트 -->
+    <script>
+        const SAVE_KEY = 'slime_clicker_rebirth_pets_save_v2_5';
+
+        // 기본 상태
+        const initialGameState = {
+            clicks: 0,
+            totalClicks: 0,
+            rebirths: 0,
+            pets: [], // { id, baseName, name, emoji, rarity, multiplier, evolution, equipped }
+            maxPets: 15, // 인벤토리 기본값
+            inventoryLevel: 1, // 최대 997번 업그레이드 지원 (최대 5,000칸)
+            
+            // 해금 상태 및 배속 단계
+            unlocked3Hatch: false, // 3개 다중 소환 해금 여부
+            unlocked5Hatch: false, // 5개 다중 소환 해금 여부
+            unlocked15Hatch: false, // 15개 다중 소환 해금 여부
+            speedLevel: 1, // 부화 속도 레벨 (1~15)
+            
+            lastBoughtEggKey: 'meadow', // 직전 구매한 알 키 기억 (R 키 연동용)
+            maxEquippedPets: 3 // 최대 장착 펫 개수 (3 -> 8 확장 가능)
+        };
+
+        let state = JSON.parse(JSON.stringify(initialGameState));
+        let activeTab = 'pets';
+        let hatchCount = 1; // 기본 소환 수량
+        
+        // 다중 방생 상태 관리 변수들
+        let releaseModeActive = false;
+        let selectedReleaseIds = [];
+
+        // 동반 파트너 펫 리스트 설정
+        const eggData = {
+            meadow: {
+                name: "숲의 에코 알",
+                cost: 100,
+                pets: [
+                    { name: "말랑토끼", emoji: "🐰", rarity: "common", multiplier: 1.5, weight: 50 },
+                    { name: "가든캣", emoji: "🐱", rarity: "common", multiplier: 2.2, weight: 35 },
+                    { name: "무당벌레", emoji: "🐞", rarity: "uncommon", multiplier: 4.0, weight: 12 },
+                    { name: "미니페가수스", emoji: "🦄", rarity: "rare", multiplier: 10.0, weight: 3 }
+                ]
+            },
+            desert: {
+                name: "황금 사막 알",
+                cost: 3000,
+                pets: [
+                    { name: "사막 여우", emoji: "🦊", rarity: "uncommon", multiplier: 15.0, weight: 50 },
+                    { name: "모래 전갈", emoji: "🦂", rarity: "uncommon", multiplier: 25.0, weight: 35 },
+                    { name: "미라독", emoji: "🐕‍🦺", rarity: "rare", multiplier: 60.0, weight: 13 },
+                    { name: "미스터리스핑크스", emoji: "🦁", rarity: "legendary", multiplier: 250.0, weight: 2 }
+                ]
+            },
+            hell: {
+                name: "불꽃 정령 알",
+                cost: 50000,
+                pets: [
+                    { name: "꼬마임프", emoji: "😈", rarity: "rare", multiplier: 600.0, weight: 50 },
+                    { name: "화산거북", emoji: "🐢", rarity: "epic", multiplier: 1800.0, weight: 35 },
+                    { name: "아기 드래곤", emoji: "🐉", rarity: "epic", multiplier: 5500.0, weight: 13 },
+                    { name: "불사조 피닉스", emoji: "🔥", rarity: "legendary", multiplier: 30000.0, weight: 2 }
+                ]
+            }
+        };
+
+        const rarityStyles = {
+            common: { bg: "bg-slate-700/80", text: "text-slate-300", border: "border-slate-600", font: "일반" },
+            uncommon: { bg: "bg-emerald-600/80", text: "text-emerald-200", border: "border-emerald-500", font: "고급" },
+            rare: { bg: "bg-blue-600/80", text: "text-blue-200", border: "border-blue-500", font: "희귀" },
+            epic: { bg: "bg-purple-600/80", text: "text-purple-200", border: "border-purple-500", font: "에픽" },
+            legendary: { bg: "bg-amber-500/85", text: "text-amber-100", border: "border-amber-400", font: "전설" }
+        };
+
+        // 환생 가치 공식
+        function getRebirthCost() {
+            return Math.floor(1000 * Math.pow(3.5, state.rebirths));
+        }
+
+        // 환생 배율 구하기
+        function getRebirthMultiplier() {
+            return 1 + state.rebirths;
+        }
+
+        // 인벤토리 확장 비용 공식
+        function getInventoryUpgradeCost() {
+            return Math.floor(500 * Math.pow(1.025, state.inventoryLevel - 1));
+        }
+
+        // 부화 속도 업그레이드 비용 공식
+        function getSpeedUpgradeCost() {
+            if (state.speedLevel >= 15) return Infinity;
+            return Math.floor(300 * Math.pow(1.6, state.speedLevel - 1));
+        }
+
+        // 장착 슬롯 확장 비용 공식 (최대 8마리)
+        function getEquipSlotUpgradeCost() {
+            if (state.maxEquippedPets >= 8) return Infinity;
+            return Math.floor(5000 * Math.pow(5, state.maxEquippedPets - 3));
+        }
+
+        // 부화 시간 계산 (레벨 15 달성 시 완전히 스킵)
+        function getHatchDuration() {
+            if (state.speedLevel >= 15) return 0; // 즉시 스킵
+            return 1200 - (state.speedLevel - 1) * 80;
+        }
+
+        // 환생 레벨별 슬라임 비주얼 및 닉네임 목록
+        function getSlimeTierData() {
+            const rb = state.rebirths;
+            if (rb === 0) {
+                return { name: "초록 슬라임", color: "#22c55e", shadow: "rgba(34,197,94,0.4)" };
+            } else if (rb <= 2) {
+                return { name: "파란 물슬라임", color: "#0ea5e9", shadow: "rgba(14,165,233,0.4)" };
+            } else if (rb <= 5) {
+                return { name: "빨간 불꽃슬라임", color: "#f43f5e", shadow: "rgba(244,63,94,0.4)" };
+            } else if (rb <= 9) {
+                return { name: "퍼플 마법슬라임", color: "#a855f7", shadow: "rgba(168,85,247,0.4)" };
+            } else {
+                return { name: "전설의 골드 슬라임", color: "#eab308", shadow: "rgba(234,179,8,0.5)" };
+            }
+        }
+
+        // 장착한 펫 보너스 곱
+        function getPetBonus() {
+            let equippedPets = state.pets.filter(p => p.equipped);
+            if (equippedPets.length === 0) return 1.0;
+            let sum = 0;
+            equippedPets.forEach(p => {
+                sum += p.multiplier;
+            });
+            return sum;
+        }
+
+        // 탭당 젤리 획득 공식
+        function getDPC() {
+            let base = 1;
+            let rebirthBonus = getRebirthMultiplier();
+            let petBonus = getPetBonus();
+            return Math.floor(base * rebirthBonus * petBonus);
+        }
+
+        // --- 세이브 & 로드 ---
+        function saveGame() {
+            try {
+                localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+            } catch (e) {}
+        }
+
+        function loadGame() {
+            try {
+                const saved = localStorage.getItem(SAVE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state = { ...initialGameState, ...parsed };
+                    if (!Array.isArray(state.pets)) state.pets = [];
+                    
+                    // 과거 버전 세이브 데이터 마이그레이션 및 하위 호환 보장
+                    state.pets.forEach(pet => {
+                        if (pet.evolution === undefined) pet.evolution = 0;
+                        if (!pet.baseName) {
+                            let cleanName = pet.name;
+                            cleanName = cleanName.replace("✨ 샤이니 ", "");
+                            cleanName = cleanName.replace("👑 골드 ", "");
+                            cleanName = cleanName.replace("🌈 레인보우 ", "");
+                            pet.baseName = cleanName;
+                        }
+                    });
+                    if (state.maxEquippedPets === undefined) state.maxEquippedPets = 3;
+                }
+            } catch (e) {
+                state = JSON.parse(JSON.stringify(initialGameState));
+            }
+            updateUI();
+        }
+
+        // --- UI 실시간 업데이트 ---
+        function updateUI() {
+            // 자원 업데이트
+            document.getElementById('gold-display').innerText = Math.floor(state.clicks).toLocaleString();
+            document.getElementById('rebirth-display').innerText = state.rebirths.toLocaleString();
+            
+            // 탭 획득 지표 및 보너스 수치
+            document.getElementById('dpc-display').innerText = `+${getDPC().toLocaleString()} 🍬`;
+            document.getElementById('rebirth-bonus-display').innerText = `x${getRebirthMultiplier().toFixed(1)}`;
+            document.getElementById('pet-bonus-display').innerText = `x${getPetBonus().toFixed(1)}`;
+
+            // 실시간 장착 펫 카운트 수량 비율 표시 갱신
+            const equippedCount = state.pets.filter(p => p.equipped).length;
+            document.getElementById('equipped-ratio-display').innerText = `(${equippedCount}/${state.maxEquippedPets})`;
+
+            // 환생 영역 정보 갱신
+            document.getElementById('current-rebirth-count').innerText = state.rebirths;
+            document.getElementById('next-rebirth-mult').innerText = `+${(state.rebirths + 1).toFixed(1)}x`;
+            const rebirthCost = getRebirthCost();
+            document.getElementById('rebirth-btn').innerText = `${rebirthCost.toLocaleString()} 🍬`;
+            document.getElementById('rebirth-btn').disabled = state.clicks < rebirthCost;
+
+            // 슬라임 외모 변경
+            const slimeData = getSlimeTierData();
+            document.getElementById('slime-rank-badge').innerText = slimeData.name;
+            document.getElementById('slime-rank-badge').style.color = slimeData.color;
+            document.getElementById('slime-rank-badge').style.borderColor = slimeData.color + "40";
+            
+            const slimeBody = document.getElementById('slime-body');
+            const slimeSvg = document.getElementById('slime-svg');
+            if (slimeBody) slimeBody.setAttribute('fill', slimeData.color);
+            if (slimeSvg) slimeSvg.style.filter = `drop-shadow(0 10px 15px ${slimeData.shadow})`;
+
+            // 알 뽑기 비활성화 여부 실시간 필터링
+            for (let eggKey in eggData) {
+                const btn = document.getElementById(`egg-${eggKey}-btn`);
+                if (btn) {
+                    const totalCost = eggData[eggKey].cost * hatchCount;
+                    btn.innerText = `${totalCost.toLocaleString()} 🍬`;
+                    btn.disabled = state.clicks < totalCost;
+                }
+            }
+
+            // 가방 인벤토리 수량 & 확장 횟수 렌더링 (최대 5000마리 제한)
+            document.getElementById('pet-count').innerText = state.pets.length;
+            document.getElementById('pet-max').innerText = state.maxPets;
+            document.getElementById('bag-upgrade-count-display').innerText = (state.inventoryLevel - 1);
+            
+            const bagCost = getInventoryUpgradeCost();
+            const upgradeBtn = document.getElementById('bag-upgrade-btn');
+            if (state.maxPets >= 5000) {
+                document.getElementById('bag-cost-display').innerText = "최대 확장 완료";
+                if (upgradeBtn) upgradeBtn.disabled = true;
+            } else {
+                document.getElementById('bag-cost-display').innerText = bagCost.toLocaleString();
+                if (upgradeBtn) upgradeBtn.disabled = state.clicks < bagCost;
+            }
+
+            // 슬롯 확장 버튼 상태 제어 (최대 8마리)
+            const equipSlotBtn = document.getElementById('equip-slot-upgrade-btn');
+            const equipSlotCostDisplay = document.getElementById('equip-slot-cost-display');
+            if (state.maxEquippedPets >= 8) {
+                equipSlotCostDisplay.innerText = "MAX (8마리)";
+                if (equipSlotBtn) equipSlotBtn.disabled = true;
+            } else {
+                const cost = getEquipSlotUpgradeCost();
+                equipSlotCostDisplay.innerText = cost.toLocaleString();
+                if (equipSlotBtn) equipSlotBtn.disabled = state.clicks < cost;
+            }
+
+            // 다중 부화 해금 버튼 활성화 상태 제어 (3회 / 5회 / 15회)
+            const unlock3Btn = document.getElementById('unlock-3-btn');
+            const unlock5Btn = document.getElementById('unlock-5-btn');
+            const unlock15Btn = document.getElementById('unlock-15-btn');
+            
+            if (state.unlocked3Hatch) {
+                unlock3Btn.classList.add('hidden');
+            } else {
+                unlock3Btn.classList.remove('hidden');
+                unlock3Btn.disabled = state.clicks < 1000;
+            }
+
+            if (state.unlocked5Hatch) {
+                unlock5Btn.classList.add('hidden');
+            } else {
+                unlock5Btn.classList.remove('hidden');
+                unlock5Btn.disabled = state.clicks < 5000;
+            }
+
+            if (state.unlocked15Hatch) {
+                unlock15Btn.classList.add('hidden');
+            } else {
+                unlock15Btn.classList.remove('hidden');
+                unlock15Btn.disabled = state.clicks < 25000;
+            }
+
+            // 다중 수량 선택 버튼 잠금 시각적 필터 처리
+            const hatch3Btn = document.getElementById('hatch-cnt-3');
+            const hatch5Btn = document.getElementById('hatch-cnt-5');
+            const hatch15Btn = document.getElementById('hatch-cnt-15');
+
+            if (state.unlocked3Hatch) {
+                hatch3Btn.innerHTML = "3개";
+                hatch3Btn.style.opacity = "1";
+            } else {
+                hatch3Btn.innerHTML = "🔒 3개";
+                hatch3Btn.style.opacity = "0.5";
+            }
+
+            if (state.unlocked5Hatch) {
+                hatch5Btn.innerHTML = "5개";
+                hatch5Btn.style.opacity = "1";
+            } else {
+                hatch5Btn.innerHTML = "🔒 5개";
+                hatch5Btn.style.opacity = "0.5";
+            }
+
+            if (state.unlocked15Hatch) {
+                hatch15Btn.innerHTML = "15개";
+                hatch15Btn.style.opacity = "1";
+            } else {
+                hatch15Btn.innerHTML = "🔒 15개";
+                hatch15Btn.style.opacity = "0.5";
+            }
+
+            // 부화 속도 15단계 UI 갱신
+            const speedUpgradeBtn = document.getElementById('speed-upgrade-btn');
+            const speedLevelDisplay = document.getElementById('speed-level-display');
+            const speedCostDisplay = document.getElementById('speed-cost-display');
+
+            if (state.speedLevel >= 15) {
+                speedLevelDisplay.innerText = "Lv.15 (MAX 스킵)";
+                speedCostDisplay.innerText = "최대 강화";
+                if (speedUpgradeBtn) speedUpgradeBtn.disabled = true;
+            } else {
+                const currentDuration = getHatchDuration() / 1000;
+                speedLevelDisplay.innerText = `Lv.${state.speedLevel} (${currentDuration.toFixed(2)}초)`;
+                const speedCost = getSpeedUpgradeCost();
+                speedCostDisplay.innerText = speedCost.toLocaleString();
+                if (speedUpgradeBtn) speedUpgradeBtn.disabled = state.clicks < speedCost;
+            }
+
+            renderPets();
+        }
+
+        // --- 토스트 알림 메시지 ---
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            toastMsg.innerText = message;
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2500);
+        }
+
+        // --- 하단 메뉴 탭 제어 ---
+        function switchTab(tabId) {
+            activeTab = tabId;
+            document.getElementById('tab-pets').classList.add('hidden');
+            document.getElementById('tab-eggs').classList.add('hidden');
+            document.getElementById('tab-rebirth').classList.add('hidden');
+            
+            const tabs = ['pets', 'eggs', 'rebirth'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-btn-${t}`);
+                btn.className = "roblox-btn py-3 rounded-xl font-black pixel-font transition text-xs border-2 border-slate-950 bg-slate-800 text-slate-300";
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            activeBtn.className = "roblox-btn py-3 rounded-xl font-black pixel-font transition text-xs border-2 border-slate-950 bg-amber-500 text-slate-950 roblox-btn-orange";
+            
+            if (tabId !== 'pets') {
+                cancelReleaseMode();
+            }
+        }
+
+        // --- 메인 슬라임 탭 클릭 구역 작동 루프 ---
+        const clickZone = document.getElementById('click-zone');
+        const slimeChar = document.getElementById('slime-character');
+
+        function doClick(e) {
+            if (e && e.cancelable) e.preventDefault();
+            
+            playClickSound();
+
+            const clickPower = getDPC();
+            state.clicks += clickPower;
+            state.totalClicks += clickPower;
+
+            // 터치/클릭 좌표 텍스트 이펙트
+            let clientX, clientY;
+            if (e && e.touches && e.touches[0]) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else if (e && e.clientX !== undefined) {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            } else {
+                const rect = slimeChar.getBoundingClientRect();
+                clientX = rect.left + (rect.width / 2);
+                clientY = rect.top + (rect.height / 2) - 20;
+            }
+
+            createFloatingText(clientX, clientY, `+${clickPower.toLocaleString()}`);
+
+            // 슬라임 피격/바운스 리셋 애니메이션
+            slimeChar.classList.remove('slime-animation');
+            void slimeChar.offsetWidth; 
+            slimeChar.classList.add('slime-clicked');
+            
+            setTimeout(() => {
+                slimeChar.classList.remove('slime-clicked');
+                slimeChar.classList.add('slime-animation');
+            }, 150);
+
+            updateUI();
+            saveGame();
+        }
+
+        clickZone.addEventListener('mousedown', (e) => doClick(e));
+        clickZone.addEventListener('touchstart', (e) => doClick(e), { passive: false });
+
+        // 키보드 연타 및 R키 재부화 리스너
+        window.addEventListener('keydown', (e) => {
+            const statsModal = document.getElementById('stats-modal');
+            const helpModal = document.getElementById('help-modal');
+            const confirmModal = document.getElementById('confirm-modal');
+            const hatchModal = document.getElementById('hatch-modal');
+            const bulkConfirmModal = document.getElementById('bulk-release-confirm-modal');
+
+            const isStatsOpen = statsModal && !statsModal.classList.contains('hidden');
+            const isHelpOpen = helpModal && !helpModal.classList.contains('hidden');
+            const isConfirmOpen = confirmModal && !confirmModal.classList.contains('hidden');
+            const isHatchOpen = hatchModal && !hatchModal.classList.contains('hidden');
+            const isBulkConfirmOpen = bulkConfirmModal && !bulkConfirmModal.classList.contains('hidden');
+
+            // [R 키 감지 로직] 결과창이 켜져 있거나 꺼져 있을 때 빠른 재소환 유도
+            if (e.key === 'r' || e.key === 'R' || e.key === 'ㄱ' || e.key === 'ㄲ') {
+                if (isConfirmOpen || isStatsOpen || isHelpOpen || isBulkConfirmOpen) return;
+                
+                // 알 뽑기창이 활성화 상태라면 닫아주고 이전 값으로 구매
+                closeHatchModal();
+                buyEgg(state.lastBoughtEggKey || 'meadow');
+                return;
+            }
+
+            if (isStatsOpen || isHelpOpen || isConfirmOpen || isHatchOpen || isBulkConfirmOpen) return;
+
+            if (e.key === ' ') e.preventDefault();
+
+            if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
+                if (e.key === ' ' || e.key === 'Enter') {
+                    document.activeElement.blur();
+                }
+            }
+
+            if (e.key.length === 1 || e.key === 'Enter' || e.key === ' ') {
+                doClick(null);
+            }
+        });
+
+        // 텍스트 생성기
+        function createFloatingText(x, y, text) {
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            el.innerText = text;
+            
+            const tier = getSlimeTierData();
+            el.style.color = tier.color;
+            el.style.textShadow = '0 0 6px #000';
+
+            const offsetLeft = (Math.random() - 0.5) * 50;
+            el.style.left = `${x + offsetLeft - 20}px`;
+            el.style.top = `${y - 30}px`;
+
+            document.body.appendChild(el);
+            el.addEventListener('animationend', () => el.remove());
+        }
+
+        // --- 펫 리스트 렌더링 ---
+        function renderPets() {
+            const grid = document.getElementById('pets-grid');
+            grid.innerHTML = '';
+
+            if (state.pets.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-4 text-center py-8 text-slate-500 font-bold text-xs leading-relaxed">
+                        데리고 있는 펫이 없어요.<br>
+                        🥚 '알 소환' 탭에서 파트너를 맞이해보세요!
+                    </div>
+                `;
+                return;
+            }
+
+            // 정렬: 장착된 펫 우선, 그 뒤엔 배율 내림차순
+            const sortedPets = [...state.pets].sort((a, b) => {
+                if (a.equipped && !b.equipped) return -1;
+                if (!a.equipped && b.equipped) return 1;
+                return b.multiplier - a.multiplier;
+            });
+
+            sortedPets.forEach(pet => {
+                const style = rarityStyles[pet.rarity] || rarityStyles.common;
+                const card = document.createElement('div');
+                
+                // 진화 레벨별 비주얼 디자인 동적 산출 (샤이니 / 골드 / 레인보우)
+                let evoBorderClass = "border-slate-950 border-2";
+                let evoCardStyle = "";
+                let evoBadgeHTML = "";
+
+                if (pet.evolution === 1) {
+                    evoBorderClass = "border-yellow-300 border-2 animate-pulse";
+                    evoCardStyle = "box-shadow: inset 0 0 8px #facc15, 0 0 8px rgba(250, 204, 21, 0.4);";
+                    evoBadgeHTML = `<span class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[7px] bg-yellow-400 text-slate-950 font-black rounded-md px-1.5 py-0.5 border border-slate-950 scale-90 whitespace-nowrap">✨ SHINY</span>`;
+                } else if (pet.evolution === 2) {
+                    evoBorderClass = "border-amber-400 border-2";
+                    evoCardStyle = "box-shadow: inset 0 0 12px #f59e0b, 0 0 10px rgba(245, 158, 11, 0.5); background: linear-gradient(135deg, #78350f, #3f1a05);";
+                    evoBadgeHTML = `<span class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[7px] bg-amber-400 text-slate-950 font-black rounded-md px-1.5 py-0.5 border border-slate-950 scale-90 whitespace-nowrap">👑 GOLD</span>`;
+                } else if (pet.evolution === 3) {
+                    evoBorderClass = "border-purple-400 border-2";
+                    evoCardStyle = "box-shadow: inset 0 0 16px #ec4899, 0 0 14px rgba(236, 72, 153, 0.6); background: linear-gradient(135deg, #1e1b4b, #3b0764);";
+                    evoBadgeHTML = `<span class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[7px] bg-gradient-to-r from-pink-500 to-purple-600 text-white font-black rounded-md px-1.5 py-0.5 border border-slate-950 scale-90 whitespace-nowrap">🌈 RAINBOW</span>`;
+                }
+
+                // 클릭 조작 분기 (다중 방생 모드 vs 일반 원터치 바로 장착 모드)
+                if (releaseModeActive) {
+                    const isSelected = selectedReleaseIds.includes(pet.id);
+                    card.onclick = () => toggleReleaseSelection(pet.id);
+                    
+                    const selectBorder = isSelected 
+                        ? 'border-rose-500 border-4 scale-95 shadow-md shadow-rose-500/30' 
+                        : evoBorderClass;
+                        
+                    card.className = `${style.bg} ${selectBorder} rounded-xl p-2 flex flex-col items-center justify-between relative cursor-pointer hover:brightness-110 active:scale-95 transition-all`;
+                    card.style = isSelected ? "" : evoCardStyle;
+                    card.innerHTML = `
+                        <span class="absolute -top-1.5 -right-1.5 text-[8px] ${isSelected ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-400'} font-black rounded-full w-5 h-5 flex items-center justify-center border border-slate-950 scale-90">
+                            ${isSelected ? '✓' : ''}
+                        </span>
+                        <span class="text-3xl mb-1">${pet.emoji}</span>
+                        <div class="text-center w-full">
+                            <p class="text-[9px] font-black truncate text-slate-100 leading-none">${pet.name}</p>
+                            <span class="text-[8px] font-bold opacity-85 block mt-1 pixel-font text-amber-200">x${pet.multiplier.toFixed(1)}</span>
+                        </div>
+                        ${evoBadgeHTML}
+                    `;
+                } else {
+                    card.onclick = () => toggleEquipPetDirect(pet.id);
+                    const equipBorder = pet.equipped ? 'border-amber-400 border-4 scale-95 shadow-md shadow-amber-400/20' : evoBorderClass;
+                    
+                    card.className = `${style.bg} ${equipBorder} rounded-xl p-2 flex flex-col items-center justify-between relative cursor-pointer hover:brightness-110 active:scale-95 transition-all`;
+                    card.style = evoCardStyle;
+                    card.innerHTML = `
+                        ${pet.equipped ? '<span class="absolute -top-1.5 -right-1.5 text-[8px] bg-amber-400 text-slate-950 font-black rounded-full px-1 py-0.5 border border-slate-950 scale-90 leading-none">장착됨</span>' : ''}
+                        <span class="text-3xl mb-1">${pet.emoji}</span>
+                        <div class="text-center w-full">
+                            <p class="text-[9px] font-black truncate text-slate-100 leading-none">${pet.name}</p>
+                            <span class="text-[8px] font-bold opacity-85 block mt-1 pixel-font text-amber-200">x${pet.multiplier.toFixed(1)}</span>
+                        </div>
+                        ${evoBadgeHTML}
+                    `;
+                }
+                
+                grid.appendChild(card);
+            });
+        }
+
+        // --- 원터치 펫 바로 장착 기능 (슬롯 크기 연계) ---
+        function toggleEquipPetDirect(petId) {
+            const pet = state.pets.find(p => p.id === petId);
+            if (!pet) return;
+
+            if (pet.equipped) {
+                pet.equipped = false;
+                playClickSound();
+                showToast(`[${pet.name}] 장착이 해제되었습니다.`);
+            } else {
+                const currentlyEquipped = state.pets.filter(p => p.equipped).length;
+                if (currentlyEquipped >= state.maxEquippedPets) {
+                    showToast(`🚨 최대 ${state.maxEquippedPets}마리까지만 동시에 장착할 수 있습니다!`);
+                    playTone(220, 'square', 0.2, 0.15); // 경고음
+                    return;
+                }
+                pet.equipped = true;
+                playClickSound();
+                showToast(`[${pet.name}] 장착되었습니다! 파워 배율 증가!`);
+            }
+            updateUI();
+            saveGame();
+        }
+
+        // --- 가장 배율이 높은 최강 펫 원터치 일괄 자동 장착 ---
+        function equipBestPets() {
+            if (state.pets.length === 0) {
+                showToast("장착할 펫이 없습니다!");
+                return;
+            }
+            
+            state.pets.forEach(p => p.equipped = false);
+            let sorted = [...state.pets].sort((a, b) => b.multiplier - a.multiplier);
+
+            let limit = Math.min(state.maxEquippedPets, sorted.length);
+            for (let i = 0; i < limit; i++) {
+                let targetPet = state.pets.find(p => p.id === sorted[i].id);
+                if (targetPet) targetPet.equipped = true;
+            }
+
+            playUpgradeSound();
+            showToast(`🔥 가장 배율이 높은 펫 ${limit}마리를 자동 장착했습니다!`);
+            updateUI();
+            saveGame();
+        }
+
+        // --- 펫 장착 슬롯 확장 (최대 8마리) ---
+        function upgradeEquipSlots() {
+            if (state.maxEquippedPets >= 8) {
+                showToast("🐾 이미 최고의 장착 슬롯 개수(8마리)에 도달했습니다!");
+                return;
+            }
+
+            const cost = getEquipSlotUpgradeCost();
+            if (state.clicks >= cost) {
+                state.clicks -= cost;
+                state.maxEquippedPets += 1;
+
+                playUpgradeSound();
+                showToast(`🐾 펫 동시 장착 수 확장 완료! 이제 최대 ${state.maxEquippedPets}마리까지 데리고 다닐 수 있습니다.`);
+                
+                updateUI();
+                saveGame();
+            } else {
+                showToast("🍬 젤리가 부족하여 장착 슬롯을 확장할 수 없습니다!");
+            }
+        }
+
+        // --- 자동 진화 합성 시스템 (3마리 자동 합체) ---
+        function autoMergePets() {
+            let mergedAny = false;
+            let mergeLog = [];
+            let keepMerging = true;
+
+            while (keepMerging) {
+                keepMerging = false;
+
+                let groups = {};
+                state.pets.forEach(pet => {
+                    let key = pet.baseName + "_" + (pet.evolution || 0);
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(pet);
+                });
+
+                for (let key in groups) {
+                    let list = groups[key];
+                    if (list.length >= 3) {
+                        let p1 = list[0];
+                        let p2 = list[1];
+                        let p3 = list[2];
+
+                        let currentEvo = p1.evolution || 0;
+                        if (currentEvo >= 3) continue;
+
+                        let nextEvo = currentEvo + 1;
+                        let nextMultiplier = p1.multiplier * 3;
+                        let prefix = "";
+
+                        if (nextEvo === 1) prefix = "✨ 샤이니 ";
+                        else if (nextEvo === 2) prefix = "👑 골드 ";
+                        else if (nextEvo === 3) prefix = "🌈 레인보우 ";
+
+                        let newName = prefix + p1.baseName;
+
+                        let mergedPet = {
+                            id: 'pet_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                            baseName: p1.baseName,
+                            name: newName,
+                            emoji: p1.emoji,
+                            rarity: p1.rarity,
+                            multiplier: nextMultiplier,
+                            evolution: nextEvo,
+                            equipped: false
+                        };
+
+                        state.pets = state.pets.filter(p => p.id !== p1.id && p.id !== p2.id && p.id !== p3.id);
+                        state.pets.push(mergedPet);
+
+                        mergeLog.push(`${p1.baseName} ➔ ${newName}`);
+                        mergedAny = true;
+                        keepMerging = true;
+                        break;
+                    }
+                }
+            }
+
+            if (mergedAny) {
+                playUpgradeSound();
+                showToast(`✨ 진화 합성 완료! (${mergeLog.length}회 진화 완료)`);
+                enforceEquippedLimit();
+                updateUI();
+                saveGame();
+            } else {
+                showToast("진화할 수 있는 동일 종류/등급의 펫 3마리가 없습니다.");
+            }
+        }
+
+        function enforceEquippedLimit() {
+            let equipped = state.pets.filter(p => p.equipped);
+            if (equipped.length > state.maxEquippedPets) {
+                for (let i = state.maxEquippedPets; i < equipped.length; i++) {
+                    equipped[i].equipped = false;
+                }
+            }
+        }
+
+        // --- 다중 방생 모드 토글 및 로직 ---
+        function toggleReleaseMode() {
+            releaseModeActive = !releaseModeActive;
+            selectedReleaseIds = [];
+            
+            const tipEl = document.getElementById('pet-info-tip');
+            const barEl = document.getElementById('bulk-release-bar');
+            const toggleBtn = document.getElementById('multi-release-toggle-btn');
+            const unequipBtn = document.getElementById('unequip-all-btn');
+            
+            if (releaseModeActive) {
+                tipEl.classList.add('hidden');
+                barEl.classList.remove('hidden');
+                toggleBtn.innerText = "🛑 선택 취소";
+                toggleBtn.className = "bg-slate-700 hover:bg-slate-600 text-slate-100 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-950";
+                unequipBtn.classList.add('hidden');
+                document.getElementById('selected-release-count').innerText = "0";
+            } else {
+                tipEl.classList.remove('hidden');
+                barEl.classList.add('hidden');
+                toggleBtn.innerText = "🗑️ 선택 방생";
+                toggleBtn.className = "bg-rose-700 hover:bg-rose-600 text-slate-100 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-950";
+                unequipBtn.classList.remove('hidden');
+            }
+            updateUI();
+        }
+
+        function cancelReleaseMode() {
+            if (releaseModeActive) {
+                toggleReleaseMode();
+            }
+        }
+
+        function toggleReleaseSelection(petId) {
+            const index = selectedReleaseIds.indexOf(petId);
+            if (index === -1) {
+                selectedReleaseIds.push(petId);
+                playClickSound();
+            } else {
+                selectedReleaseIds.splice(index, 1);
+                playClickSound();
+            }
+            document.getElementById('selected-release-count').innerText = selectedReleaseIds.length;
+            updateUI();
+        }
+
+        function confirmBulkRelease() {
+            if (selectedReleaseIds.length === 0) {
+                showToast("방생할 펫을 최소 1마리 이상 선택해주세요!");
+                return;
+            }
+            
+            document.getElementById('bulk-count-warn').innerText = selectedReleaseIds.length;
+            document.getElementById('bulk-release-confirm-modal').classList.remove('hidden');
+        }
+
+        function closeBulkReleaseConfirmModal() {
+            document.getElementById('bulk-release-confirm-modal').classList.add('hidden');
+        }
+
+        function executeBulkRelease() {
+            const beforeLength = state.pets.length;
+            state.pets = state.pets.filter(p => !selectedReleaseIds.includes(p.id));
+            const afterLength = state.pets.length;
+            const deletedCount = beforeLength - afterLength;
+
+            playReleaseSound();
+            showToast(`${deletedCount}마리의 펫을 자연으로 무사히 돌려보냈습니다.`);
+            
+            closeBulkReleaseConfirmModal();
+            toggleReleaseMode(); 
+            updateUI();
+            saveGame();
+        }
+
+        function unequipAllPets() {
+            state.pets.forEach(p => p.equipped = false);
+            playClickSound();
+            showToast("장착 중인 모든 펫을 해제했습니다.");
+            updateUI();
+            saveGame();
+        }
+
+        // --- 가방 확장 (최대 5000마리 제한) ---
+        function upgradeInventory() {
+            if (state.maxPets >= 5000) {
+                showToast("🎒 이미 가방을 최고 수치(5000칸)까지 확장했습니다!");
+                return;
+            }
+
+            const cost = getInventoryUpgradeCost();
+            if (state.clicks >= cost) {
+                state.clicks -= cost;
+                state.maxPets = Math.min(5000, state.maxPets + 5);
+                state.inventoryLevel += 1;
+
+                playUpgradeSound();
+                showToast(`🎒 인벤토리 확장 완료! (${state.maxPets}/5000)`);
+                
+                updateUI();
+                saveGame();
+            } else {
+                showToast("🍬 젤리가 충분하지 않아 가방을 확장할 수 없습니다!");
+            }
+        }
+
+        // --- 다중 뽑기 해금 ---
+        function unlockMultiHatch(count) {
+            const price = count === 3 ? 1000 : (count === 5 ? 5000 : 25000);
+            if (state.clicks >= price) {
+                state.clicks -= price;
+                if (count === 3) {
+                    state.unlocked3Hatch = true;
+                    showToast("🎉 3개 뽑기 다중 소환 시스템을 영구 해금했습니다!");
+                } else if (count === 5) {
+                    state.unlocked5Hatch = true;
+                    showToast("🎉 5개 뽑기 다중 소환 시스템을 영구 해금했습니다!");
+                } else if (count === 15) {
+                    state.unlocked15Hatch = true;
+                    showToast("🎉 15개 뽑기 대형 소환 시스템을 영구 해금했습니다!");
+                }
+                playUpgradeSound();
+                updateUI();
+                saveGame();
+            } else {
+                showToast(`🍬 해금에 필요한 젤리(${price.toLocaleString()}개)가 부족합니다!`);
+            }
+        }
+
+        // --- 부화 속도 업그레이드 ---
+        function upgradeHatchSpeed() {
+            if (state.speedLevel >= 15) {
+                showToast("⚡ 이미 최고의 부화 속도 단계에 도달했습니다!");
+                return;
+            }
+
+            const cost = getSpeedUpgradeCost();
+            if (state.clicks >= cost) {
+                state.clicks -= cost;
+                state.speedLevel += 1;
+
+                playUpgradeSound();
+                if (state.speedLevel === 15) {
+                    showToast("⚡ 부화 속도 Lv.15 MAX 달성! 이제 대기 없이 알을 '즉시 스킵'합니다!");
+                } else {
+                    const duration = getHatchDuration() / 1000;
+                    showToast(`⚡ 부화 가속 레벨업! 단계: Lv.${state.speedLevel}/15 (부화 대기: ${duration.toFixed(2)}초)`);
+                }
+                
+                updateUI();
+                saveGame();
+            } else {
+                showToast("🍬 젤리가 부족하여 부화 가속 업그레이드를 할 수 없습니다!");
+            }
+        }
+
+        // --- 알 뽑기 세팅 제어 ---
+        function setHatchCount(count) {
+            if (count === 3 && !state.unlocked3Hatch) {
+                showToast("🔒 3회 뽑기는 아래 해금 버튼을 눌러 먼저 잠금 해제해야 합니다!");
+                return;
+            }
+            if (count === 5 && !state.unlocked5Hatch) {
+                showToast("🔒 5회 뽑기는 아래 해금 버튼을 눌러 먼저 잠금 해제해야 합니다!");
+                return;
+            }
+            if (count === 15 && !state.unlocked15Hatch) {
+                showToast("🔒 15회 뽑기는 아래 해금 버튼을 눌러 먼저 잠금 해제해야 합니다!");
+                return;
+            }
+
+            hatchCount = count;
+            [1, 3, 5, 15].forEach(num => {
+                const btn = document.getElementById(`hatch-cnt-${num}`);
+                if (num === count) {
+                    btn.className = "px-2.5 py-1 text-[10px] font-black rounded-md bg-purple-600 text-white";
+                } else {
+                    btn.className = "px-2.5 py-1 text-[10px] font-black rounded-md text-slate-400 hover:text-white";
+                }
+            });
+            playClickSound();
+            updateUI();
+        }
+
+        // --- 펫 소환 (Egg Hatch) 코어 ---
+        function buyEgg(eggKey) {
+            const egg = eggData[eggKey];
+            if (!egg) return;
+
+            state.lastBoughtEggKey = eggKey;
+
+            if (hatchCount > 15) {
+                showToast("🚨 한 번에 뽑을 수 있는 최대 개수는 15개입니다.");
+                return;
+            }
+
+            const totalCost = egg.cost * hatchCount;
+
+            if (state.clicks < totalCost) {
+                showToast("🍬 젤리가 부족하여 소환할 수 없습니다!");
+                return;
+            }
+
+            if (state.pets.length + hatchCount > state.maxPets) {
+                showToast(`🎒 보관 공간이 부족합니다! 최소 ${hatchCount}칸의 여유 공간이 필요합니다.`);
+                return;
+            }
+
+            state.clicks -= totalCost;
+            triggerHatchAnimation(egg, hatchCount);
+            updateUI();
+            saveGame();
+        }
+
+        function triggerHatchAnimation(egg, count) {
+            const modal = document.getElementById('hatch-modal');
+            const singleView = document.getElementById('single-hatch-view');
+            const multiView = document.getElementById('multi-hatch-view');
+            const eggVisual = document.getElementById('hatch-egg-visual');
+            const petVisual = document.getElementById('hatch-pet-visual');
+            const glow = document.getElementById('hatch-glow');
+            const result = document.getElementById('hatch-result');
+            const closeBtn = document.getElementById('hatch-close-btn');
+            const announce = document.getElementById('hatch-announce');
+
+            modal.classList.remove('hidden');
+            result.style.opacity = '0';
+            closeBtn.classList.add('hidden');
+
+            const rolledPets = [];
+            for (let i = 0; i < count; i++) {
+                rolledPets.push(rollPet(egg.pets));
+            }
+
+            const duration = getHatchDuration();
+            const isInstant = duration === 0;
+
+            if (count === 1) {
+                singleView.classList.remove('hidden');
+                multiView.classList.add('hidden');
+                eggVisual.classList.remove('hidden');
+                petVisual.classList.add('hidden');
+                glow.classList.add('hidden');
+
+                const rolled = rolledPets[0];
+
+                if (isInstant) {
+                    eggVisual.classList.add('hidden');
+                    petVisual.innerText = rolled.emoji;
+                    petVisual.classList.remove('hidden');
+                    glow.classList.remove('hidden');
+                    
+                    playHatchSuccessSound(rolled.rarity);
+                    announce.innerText = `우정 탄생!`;
+                    
+                    const rarityLabel = document.getElementById('hatch-rarity');
+                    const style = rarityStyles[rolled.rarity];
+                    rarityLabel.innerText = `${style.font} 등급`;
+                    rarityLabel.className = `px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20 ${style.bg} ${style.text}`;
+
+                    document.getElementById('hatch-pet-name').innerText = rolled.name;
+                    document.getElementById('hatch-pet-multiplier').innerText = `클릭 보너스 배율: +x${rolled.multiplier.toLocaleString()}`;
+
+                    result.style.opacity = '1';
+                    closeBtn.classList.remove('hidden');
+                } else {
+                    announce.innerText = `${egg.name} 흔들리는 중...`;
+                    eggVisual.classList.add('egg-shaking');
+                    
+                    let shakeInterval = setInterval(() => {
+                        playEggShakeSound();
+                    }, 200);
+
+                    setTimeout(() => {
+                        clearInterval(shakeInterval);
+                        eggVisual.classList.remove('egg-shaking');
+                        eggVisual.classList.add('hidden');
+
+                        petVisual.innerText = rolled.emoji;
+                        petVisual.classList.remove('hidden');
+                        glow.classList.remove('hidden');
+                        
+                        playHatchSuccessSound(rolled.rarity);
+                        announce.innerText = `우정 탄생!`;
+                        
+                        const rarityLabel = document.getElementById('hatch-rarity');
+                        const style = rarityStyles[rolled.rarity];
+                        rarityLabel.innerText = `${style.font} 등급`;
+                        rarityLabel.className = `px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20 ${style.bg} ${style.text}`;
+
+                        document.getElementById('hatch-pet-name').innerText = rolled.name;
+                        document.getElementById('hatch-pet-multiplier').innerText = `클릭 보너스 배율: +x${rolled.multiplier.toLocaleString()}`;
+
+                        result.style.opacity = '1';
+                        closeBtn.classList.remove('hidden');
+                    }, duration);
+                }
+            } else {
+                singleView.classList.add('hidden');
+                multiView.classList.remove('hidden');
+                multiView.innerHTML = ''; 
+
+                if (isInstant) {
+                    announce.innerText = `🎉 ${count}마리의 파트너 소환 완료!`;
+                    
+                    rolledPets.forEach(pet => {
+                        const style = rarityStyles[pet.rarity];
+                        const item = document.createElement('div');
+                        item.className = `${style.bg} border-2 ${style.border} rounded-xl p-2.5 flex flex-col items-center justify-center text-center animate-bounce`;
+                        item.innerHTML = `
+                            <span class="text-3xl mb-1">${pet.emoji}</span>
+                            <p class="text-[9px] font-black truncate text-white leading-none">${pet.name}</p>
+                            <span class="text-[8px] font-bold text-amber-200 block mt-1">x${pet.multiplier}</span>
+                        `;
+                        multiView.appendChild(item);
+                    });
+
+                    playHatchSuccessSound('rare');
+                    closeBtn.classList.remove('hidden');
+                } else {
+                    announce.innerText = `정령의 알들이 꿈틀댑니다...`;
+                    
+                    for (let i = 0; i < count; i++) {
+                        const placeholder = document.createElement('div');
+                        placeholder.id = `egg-holder-${i}`;
+                        placeholder.className = "bg-slate-800 border-2 border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center text-center egg-shaking";
+                        placeholder.innerHTML = `<span class="text-3xl">🥚</span>`;
+                        multiView.appendChild(placeholder);
+                    }
+
+                    let shakeInterval = setInterval(() => {
+                        playEggShakeSound();
+                    }, 200);
+
+                    setTimeout(() => {
+                        clearInterval(shakeInterval);
+                        multiView.innerHTML = ''; 
+                        announce.innerText = `🎉 ${count}마리의 파트너 소환 완료!`;
+
+                        rolledPets.forEach(pet => {
+                            const style = rarityStyles[pet.rarity];
+                            const item = document.createElement('div');
+                            item.className = `${style.bg} border-2 ${style.border} rounded-xl p-2.5 flex flex-col items-center justify-center text-center animate-bounce`;
+                            item.innerHTML = `
+                                <span class="text-3xl mb-1">${pet.emoji}</span>
+                                <p class="text-[9px] font-black truncate text-white leading-none">${pet.name}</p>
+                                <span class="text-[8px] font-bold text-amber-200 block mt-1">x${pet.multiplier}</span>
+                            `;
+                            multiView.appendChild(item);
+                        });
+
+                        playHatchSuccessSound('epic');
+                        closeBtn.classList.remove('hidden');
+                    }, duration);
+                }
+            }
+
+            rolledPets.forEach(rolled => {
+                const newPet = {
+                    id: 'pet_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    baseName: rolled.name,
+                    name: rolled.name,
+                    emoji: rolled.emoji,
+                    rarity: rolled.rarity,
+                    multiplier: rolled.multiplier,
+                    evolution: 0,
+                    equipped: false
+                };
+                state.pets.push(newPet);
+            });
+
+            saveGame();
+            updateUI();
+        }
+
+        function rollPet(pets) {
+            const total = pets.reduce((sum, pet) => sum + pet.weight, 0);
+            let random = Math.random() * total;
+            for (let i = 0; i < pets.length; i++) {
+                if (random < pets[i].weight) return pets[i];
+                random -= pets[i].weight;
+            }
+            return pets[0];
+        }
+
+        function closeHatchModal() {
+            document.getElementById('hatch-modal').classList.add('hidden');
+        }
+
+        // --- 환생 가공부 ---
+        function triggerRebirth() {
+            const cost = getRebirthCost();
+            if (state.clicks >= cost) {
+                state.clicks = 0;
+                state.rebirths += 1;
+
+                playUpgradeSound();
+                showToast(`🔄 환생에 성공하여 한계 돌파했습니다! 현재 배율: x${getRebirthMultiplier().toFixed(1)}`);
+                
+                updateUI();
+                saveGame();
+            } else {
+                showToast("🍬 환생 조건인 젤리가 부족합니다!");
+            }
+        }
+
+        // --- 통계 및 모달 핸들러 ---
+        function openStatsModal() {
+            document.getElementById('stat-clicks').innerText = `${state.totalClicks.toLocaleString()}회`;
+            document.getElementById('stat-total-gold').innerText = `${Math.floor(state.totalClicks).toLocaleString()} 🍬`;
+            document.getElementById('stat-helpers-count').innerText = `${state.pets.length}마리`;
+            document.getElementById('stat-bag-max').innerText = `${state.maxPets}개 슬롯`;
+            document.getElementById('stat-fever-count').innerText = `${state.rebirths}회`;
+            document.getElementById('stats-modal').classList.remove('hidden');
+        }
+
+        function closeStatsModal() {
+            document.getElementById('stats-modal').classList.add('hidden');
+        }
+
+        function openHelpModal() {
+            document.getElementById('help-modal').classList.remove('hidden');
+        }
+
+        function closeHelpModal() {
+            document.getElementById('help-modal').classList.add('hidden');
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function resetGameWithConfirm() {
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+        }
+
+        function resetGame() {
+            try {
+                localStorage.removeItem(SAVE_KEY);
+            } catch (e) {}
+            state = JSON.parse(JSON.stringify(initialGameState));
+            document.getElementById('confirm-modal').classList.add('hidden');
+
+            hatchCount = 1;
+            releaseModeActive = false;
+            selectedReleaseIds = [];
+
+            showToast("처음의 말랑이 상태로 귀환했습니다.");
+            switchTab('pets');
+            updateUI();
+        }
+
+        window.onload = function() {
+            loadGame();
+        };
+    </script>
+</body>
+</html>
